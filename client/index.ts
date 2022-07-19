@@ -9,19 +9,17 @@ const PORT = 'localhost:5000';
 const packageDef = protoLoader.loadSync(path.resolve(__dirname, '../schemas/server.proto'));
 const grpcObj = grpc.loadPackageDefinition(packageDef) as unknown as ProtoGrpcType;
 
-const server = new grpc.Server();
-server.addService(grpcObj.serverPackage.Server.service, {
-    PingPong: (req, res) => {
-        console.log("REQUEST");
-        res(null, { message: 'Pong' })
-    }
-} as ServerHandlers)
+const client = new grpcObj.serverPackage.Server(PORT, grpc.credentials.createInsecure());
 
-server.bindAsync(PORT, grpc.ServerCredentials.createInsecure(), (err, port) => {
+const deadline = new Date();
+deadline.setSeconds(deadline.getSeconds() + 5);
+
+client.waitForReady(deadline, (err) => {
     if (err) {
-        console.error('ERR', err);
+        console.error(err);
     }
 
-    console.log('Server is running on ' + port);
-    server.start();
-});
+    client.PingPong({ message: 'hello' }, (err, result) => {
+        console.log('RESULT', result)
+    })
+})
